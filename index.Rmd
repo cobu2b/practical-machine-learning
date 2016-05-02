@@ -1,22 +1,61 @@
 ---
-title: "Practical Machine Learning Course Project"
+title: "Prediction Model of Quantified Self Movement"
 author: "Thammanoon Kawinfruangfukul"
-date: "April 28, 2016"
 output: html_document
 ---
+# The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with.
+# create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did
+# Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5. 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Synopsis
+This report describes how a model is built for predicting the manner in which six participants performed barbell lifts. The data were gathered from accelerometers on the belt, forearm, arm, and dumbell [1].
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## Exploratory Data Analysis
 
-```{r}
-summary(cars)
+```{r, echo=TRUE, cache=TRUE, warning=FALSE}
+# Loading required libraries
+library(caret)
+library(parallel)
+library(doParallel)
+set.seed(1000)
+
+# Loading and preprocessing training and testing data sets
+cpath <- paste(getwd(), "/data/pml-training.csv", sep = "");
+pml_training <- read.csv(cpath, header = TRUE)
+
+cpath <- paste(getwd(), "/data/pml-testing.csv", sep = "");
+pml_testing <- read.csv(cpath, header = TRUE)
+
+# Preprocessing: Subsetting the data sets
+training <- pml_training[, -c(1:7)]
+testing <- pml_testing[, -c(1:7)]
+
+# Preprocessing: Removing a column with NA
+training <- training[, colSums(is.na(training)) == 0]
+
 ```
 
-You can also embed plots, for example:
+```{r, echo=TRUE, cache=TRUE, warning=FALSE}
+# Configuring parallel processing
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
 
-```{r, echo=FALSE}
-plot(cars)
+# Configuring trainControl object
+fitControl <- trainControl(method = "cv", number = 10, allowParallel = TRUE)
+fitControl <- trainControl(method = "cv", number = 10, allowParallel = FALSE)
+
+# Developing training model
+fit <- train(classe ~ ., method="rf", data = training, trControl = fitControl)
+
+# De-registering parallel processing cluster
+stopCluster(cluster)
+
+fit
+fit$resample
+confusionMatrix.train(fit)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# How should I select k in k-fold?
+# k-fold, k=10 (If K is small in a K-fold cross validation, the bias in the estimate of out-of-sample (test set) accuracy is larger and the variance is smaller. Under leave one out cross validation K is equal to the sample size)
+## Reference
+[1] Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
