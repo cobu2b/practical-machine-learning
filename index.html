@@ -201,7 +201,7 @@ confusionMatrix(pred, test_set$classe)</code></pre>
 ## Balanced Accuracy      0.9998   0.9985   0.9973   0.9901   0.9972</code></pre>
 <p>Using the prediction model to evaluate test set, we find that the model has 0.9951568 accuracy.</p>
 <p>We will continue evaluating out of sample data by using the 20 samples given in pml-testing.csv. The following are prediction results. The prediction results match with the results from Course Project Prediction Quiz.</p>
-<pre class="r"><code>predict(fit, testing)</code></pre>
+<pre class="r"><code>predict(fit, testing)  </code></pre>
 <pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
 ## Levels: A B C D E</code></pre>
 </div>

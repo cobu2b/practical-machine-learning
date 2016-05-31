@@ -71,7 +71,7 @@ Using the prediction model to evaluate test set, we find that the model has `r a
 
 We will continue evaluating out of sample data by using the 20 samples given in pml-testing.csv. The following are prediction results. The prediction results match with the results from Course Project Prediction Quiz.
 ```{r, echo=TRUE, cache=TRUE, warning=FALSE}
-predict(fit, testing)
+predict(fit, testing)  
 ```
 
 ## Reference
