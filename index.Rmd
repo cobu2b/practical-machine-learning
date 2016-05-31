@@ -3,15 +3,11 @@ title: "Prediction Model of Quantified Self Movement"
 author: "Thammanoon Kawinfruangfukul"
 output: html_document
 ---
-# The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with.
-# create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did
-# Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5. 
-
 ## Synopsis
-This report describes how a model is built for predicting the manner in which six participants performed barbell lifts. The data were gathered from accelerometers on the belt, forearm, arm, and dumbell [1].
+This report describes how a model is built for predicting the manner in which six participants performed barbell lifts. The data were gathered from accelerometers on the belt, forearm, arm, and dumbell [1]. Exploratory data analysis, model building, and model evaluation are described below.
 
 ## Exploratory Data Analysis
-
+This section performs cleaning data and extracting important information for building a prediction model.
 ```{r, echo=TRUE, cache=TRUE, warning=FALSE}
 # Loading required libraries
 library(caret)
@@ -20,42 +16,63 @@ library(doParallel)
 set.seed(1000)
 
 # Loading and preprocessing training and testing data sets
-cpath <- paste(getwd(), "/data/pml-training.csv", sep = "");
-pml_training <- read.csv(cpath, header = TRUE)
+cpath        <- paste(getwd(), "/data/pml-training.csv", sep = "");
+pml_training <- read.csv(cpath, header = TRUE, sep = ",", na.strings = c("NA","#DIV/0!",""))
 
-cpath <- paste(getwd(), "/data/pml-testing.csv", sep = "");
-pml_testing <- read.csv(cpath, header = TRUE)
+cpath        <- paste(getwd(), "/data/pml-testing.csv", sep = "");
+pml_testing  <- read.csv(cpath, header = TRUE, sep = ",", na.strings = c("NA","#DIV/0!",""))
 
-# Preprocessing: Subsetting the data sets
+# Preprocessing: Subsetting the data sets (excluding user and time-related information)
 training <- pml_training[, -c(1:7)]
-testing <- pml_testing[, -c(1:7)]
+testing  <- pml_testing[, -c(1:7)]
 
 # Preprocessing: Removing a column with NA
-training <- training[, colSums(is.na(training)) == 0]
-
+training  <- training[, colSums(is.na(training)) == 0]
+testing   <- testing[, colSums(is.na(testing)) == 0]
 ```
 
+## Model Building
+The data are divided into training and test sets (80%:20%). The prediction model is random forest. In the model building, principal components analysis (PCA) is used for grouping quantitative variables that are highly collarated with each other. Moreover, cross validation (10-fold) is applied for picking variables to include in the model. Both PCA and cross validation are configured in fitControl variable.
+
+Random forest is used because it provides a high-accuracy model; however, it may introduce overfitting and has a high out of sample error. PCA and cross validation help in alleviating the overfitting and reducing the out of sample error.
 ```{r, echo=TRUE, cache=TRUE, warning=FALSE}
+inTrain      <- createDataPartition(training$classe, p = 0.80, list = F)
+training_set <- training[inTrain,]
+test_set     <- training[-inTrain,]
+
 # Configuring parallel processing
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
 # Configuring trainControl object
-fitControl <- trainControl(method = "cv", number = 10, allowParallel = TRUE)
-fitControl <- trainControl(method = "cv", number = 10, allowParallel = FALSE)
+fitControl <- trainControl(method = "cv", number = 10, preProcOptions="pca", allowParallel = TRUE)
 
 # Developing training model
-fit <- train(classe ~ ., method="rf", data = training, trControl = fitControl)
+fit <- train(classe ~ ., method="rf", data = training_set, trControl = fitControl)
 
 # De-registering parallel processing cluster
 stopCluster(cluster)
 
+# Show the model
 fit
-fit$resample
 confusionMatrix.train(fit)
 ```
 
-# How should I select k in k-fold?
-# k-fold, k=10 (If K is small in a K-fold cross validation, the bias in the estimate of out-of-sample (test set) accuracy is larger and the variance is smaller. Under leave one out cross validation K is equal to the sample size)
+## Model Evaluation
+```{r, echo=TRUE, cache=TRUE, warning=FALSE}
+# Predict test set
+pred <- predict(fit, test_set)
+
+# Show confusion matrix and statistics
+accuracy <- confusionMatrix(pred, test_set$classe)$overall['Accuracy']
+confusionMatrix(pred, test_set$classe)
+```
+Using the prediction model to evaluate test set, we find that the model has `r accuracy` accuracy. 
+
+We will continue evaluating out of sample data by using the 20 samples given in pml-testing.csv. The following are prediction results. The prediction results match with the results from Course Project Prediction Quiz.
+```{r, echo=TRUE, cache=TRUE, warning=FALSE}
+predict(fit, testing)
+```
+
 ## Reference
 [1] Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
